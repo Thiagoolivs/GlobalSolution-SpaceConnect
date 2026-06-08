@@ -11,6 +11,20 @@
 
 ---
 
+## 📑 Sumário para Avaliadores
+
+> **Professores:** acesso rápido à seção da sua disciplina, com o mapeamento exato dos requisitos.
+
+| Disciplina | Seção (link direto) | O que avaliar |
+|-----------|---------------------|----------------|
+| 🤖 **Prompt and Artificial Intelligence** | **[▶ Abrir seção PIA](#pia)** | IA generativa (Llama 3.1/Groq), prompt engineering, chat com memória, insights automáticos |
+| 🔋 **Energias Renováveis e Sustentáveis (SERS)** | **[▶ Abrir seção SERS](#sers)** | Bateria solar, matriz energética, balanço gerado×consumido, eficiência, decisão sustentável |
+| 🧮 **Data Structures and Algorithms (DSA)** | **[▶ Abrir seção DSA](#dsa)** | Vetores/listas, laços, condicionais, funções, algoritmos de busca/agregação |
+
+**Navegação geral:** [Visão Geral](#visão-geral-do-projeto) · [Arquitetura](#arquitetura-da-solução) · [Tecnologias](#tecnologias-utilizadas) · [Funcionalidades](#funcionalidades-implementadas) · [Demonstração](#demonstração-do-sistema) · [Estrutura de Pastas](#estrutura-de-pastas) · [Banco de Dados](#banco-de-dados) · [Regras de Negócio](#regras-de-negócio) · [Integração com IA](#integração-com-inteligência-artificial) · [Como Executar](#como-executar) · [Evidências para Avaliação](#evidências-para-avaliação) · [Vídeo](#vídeo-de-demonstração) · [Conclusão](#conclusão)
+
+---
+
 ## Visão Geral do Projeto
 
 Missões espaciais dependem de sistemas de solo (*ground segment*) que monitoram continuamente as condições da nave para garantir a segurança da tripulação e o sucesso operacional. Quando uma variável sai da faixa ideal — ou pior, quando **várias falham ao mesmo tempo** — a equipe de controle precisa entender **rapidamente** o que está acontecendo, por quê, e o que exige ação imediata.
@@ -430,6 +444,7 @@ def obter_resposta_chat(historico, pergunta):
 
 # Aplicação nas Disciplinas
 
+<a id="pia"></a>
 ## Disciplina — Prompt and Artificial Intelligence
 
 **Como o projeto atende:** IA generativa integrada de ponta a ponta com engenharia de prompt explícita.
@@ -442,8 +457,21 @@ def obter_resposta_chat(historico, pergunta):
 
 **Evidências de código:** `obter_insight_ia`, `obter_resposta_chat`, `gerar_narrativa_missao`, `gerar_sugestao_copiloto` (todas em `src/services.py`); chat em `POST /api/chat` (`src/routes.py`); renderização Markdown e widget no `templates/index.html`.
 
+**Requisitos da disciplina → como foi atendido:**
+
+| Requisito | Como foi atendido | Onde está |
+|-----------|-------------------|-----------|
+| IA generativa integrada | Llama 3.1-8b-instant via Groq em 3 frentes (insight, narrativa, chat) | `services.py` |
+| Prompt engineering / system prompt | papéis ("engenheiro NASA"), restrições de formato e tamanho | system prompts em `services.py` |
+| Contextualização da missão espacial | telemetria real (5 variáveis + risco) injetada no prompt | `obter_insight_ia` (user message) |
+| Chatbot funcional | chat operador ↔ IA com renderização Markdown | `POST /api/chat` + `index.html` |
+| Memória da conversa | histórico persistido e reenviado a cada turno | `MensagemChat` + `obter_resposta_chat` |
+| Geração automática de insights | recomendação por ciclo salva no banco | campo `ia_insight` |
+| Robustez (tratamento de falha) | `try/except` + *fallback* de contingência em toda chamada | todas as chamadas Groq |
+
 ---
 
+<a id="sers"></a>
 ## Disciplina — Soluções em Energias Renováveis e Sustentáveis
 
 **Como o projeto atende:** o subsistema energético modela geração solar, consumo e sustentabilidade, e alimenta decisões.
@@ -468,8 +496,22 @@ def calcular_metricas_energeticas(linha):
 
 **Evidências de código:** `calcular_metricas_energeticas`, `resumo_energetico`, `analisar_energia`, `analisar_estabilidade` (`src/services.py`); painel "Subsistema Energético" e endpoint `GET /api/energetico`.
 
+**Requisitos da disciplina → como foi atendido:**
+
+| Requisito | Como foi atendido | Onde está |
+|-----------|-------------------|-----------|
+| Monitoramento energético | variáveis de energia avaliadas por ciclo | `analisar_energia`, `analisar_estabilidade` |
+| Bateria solar | carga monitorada (faixa 60–100%) + alertas | `bateria_solar` + `analisar_energia` |
+| Matriz energética | estabilidade da rede elétrica da nave | `matriz` + `analisar_estabilidade` |
+| Eficiência operacional | eficiência calculada por ciclo (perdas por instabilidade) | `calcular_metricas_energeticas` |
+| Geração × consumo (balanço) | P=V·I, geração fotovoltaica com *derating* térmico, balanço | `calcular_metricas_energeticas` |
+| Tomada de decisão baseada em energia | recomendação automática (déficit → priorizar recarga) | `resumo_energetico` |
+| Alertas relacionados à energia | alerta "ANOMALIA ENERGÉTICA" na série | `gerar_alertas_avancados` |
+| Sustentabilidade da missão | superávit/déficit + ações de economia | `resumo_energetico` + painel SERS |
+
 ---
 
+<a id="dsa"></a>
 ## Disciplina — Data Structures and Algorithms
 
 **Como o projeto atende:** a versão terminal (`mission_control.py`) é um programa em **Python puro** que monitora a missão usando estruturas de dados e algoritmos clássicos — exatamente o escopo do enunciado (condicionais, repetição, vetores/listas e funções).
@@ -506,6 +548,15 @@ def identificar_area_mais_afetada(matriz):
 
 **Execução:** `python mission_control.py`
 **Evidências de código:** `mission_control.py` (programa completo, independente, sem dependências externas).
+
+**Critérios de avaliação do enunciado → como foi atendido:**
+
+| Critério (peso) | Como foi atendido |
+|-----------------|-------------------|
+| Funcionamento do Sistema (4,0) | `mission_control.py` executa do início ao relatório final sem erro; o dashboard web complementa com simulação/menu visual |
+| Uso correto das estruturas de dados (3,0) | matriz `dados_missao` (lista de listas), listas acumuladoras, dicionários de métricas, vetores de rótulos/unidades |
+| Organização do código (2,0) | funções nomeadas e coesas, constantes (sem números mágicos), docstrings, separação clara de responsabilidades |
+| Lógica implementada (1,0) | scoring 0–2, classificação por faixas, tendência, busca de máximo (`index(max(...))`), conclusão dinâmica |
 
 ---
 
