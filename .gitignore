@@ -1,0 +1,57 @@
+# ───────────────────────────── Segredos / Ambiente ─────────────────────────────
+.env
+*.env
+!.env.example
+
+# ───────────────────────────── Banco de dados (efémero) ────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+missao.db
+mission_control.db
+
+# ───────────────────────────── Python ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ───────────────────────────── Virtualenv ──────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+
+# ───────────────────────────── Testes / cache de ferramentas ───────────────────
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ───────────────────────────── IDE / Editores ──────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*~
+
+# ───────────────────────────── Claude Code (contexto/tooling local) ─────────────
+.claude/
+*.claude
+CLAUDE.local.md
+
+# ───────────────────────────── Logs / Temporários ──────────────────────────────
+*.log
+logs/
+*.tmp
+tmp/
+_smoke_*.py
+_check*.py
+
+# ───────────────────────────── Sistema operacional ─────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini

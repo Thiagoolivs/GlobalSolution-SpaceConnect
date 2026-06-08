@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mission Control AI — {{ missao }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0e17;
+            --panel-1: rgba(22,29,46,.60);
+            --panel-2: rgba(14,19,31,.60);
+            --border: rgba(148,163,184,.12);
+            --accent: #818cf8;
+            --accent-soft: rgba(129,140,248,.14);
+            --ink: #e6eaf2; --muted: #8a97ad; --faint: #5d6b82;
+            --green: #34d399; --amber: #fbbf24; --rose: #fb7185;
+        }
+        * { -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Sora', system-ui, sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(1100px 560px at 50% -260px, rgba(129,140,248,.12), transparent 70%),
+                radial-gradient(820px 480px at 110% 120%, rgba(56,189,248,.05), transparent 70%),
+                var(--bg);
+            background-attachment: fixed;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .display { font-family: 'Sora', sans-serif; font-weight: 800; letter-spacing: -.015em; }
+
+        .panel {
+            position: relative;
+            background: linear-gradient(180deg, var(--panel-1), var(--panel-2));
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            box-shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 18px 44px -30px rgba(0,0,0,.9);
+        }
+        .panel-rose { border-color: rgba(251,113,133,.28); }
+
+        .sec-label { display:flex; align-items:center; gap:12px; font-size:13.5px; font-weight:600; color:#cbd5e1; }
+        .sec-label .idx { font-family:'JetBrains Mono'; font-size:11px; font-weight:500; color:var(--accent); background:var(--accent-soft); border:1px solid rgba(129,140,248,.25); padding:3px 9px; border-radius:7px; }
+
+        .led { width:7px; height:7px; border-radius:50%; display:inline-block; }
+        .led-on { background:var(--green); box-shadow:0 0 7px rgba(52,211,153,.7); }
+        .led-accent { background:var(--accent); box-shadow:0 0 7px rgba(129,140,248,.7); }
+        @keyframes soft { 0%,100%{opacity:1} 50%{opacity:.4} }
+        .pulse-soft { animation:soft 2.6s infinite; }
+
+        input[type=range] { cursor:pointer; height:4px; -webkit-appearance:none; background:rgba(129,140,248,.18); border-radius:4px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px rgba(129,140,248,.15); cursor:pointer; }
+        select, input[type=number], input[type=text] { color-scheme:dark; }
+
+        .nav-link { display:flex; align-items:center; white-space:nowrap; padding:7px 13px; border-radius:9px; font-size:12px; font-weight:500; color:var(--muted); transition:all .15s; }
+        .nav-link:hover { color:var(--ink); background:rgba(148,163,184,.08); }
+        .nav-link.active { color:#fff; background:var(--accent-soft); box-shadow:inset 0 0 0 1px rgba(129,140,248,.3); }
+
+        .chip-filtro { font-family:'JetBrains Mono'; font-size:10px; letter-spacing:.03em; padding:5px 11px; border-radius:8px; color:var(--muted); border:1px solid var(--border); cursor:pointer; transition:all .15s; background:transparent; }
+        .chip-filtro:hover { color:var(--ink); }
+        .chip-on { color:#fff; background:var(--accent-soft); border-color:rgba(129,140,248,.4); }
+
+        .scrollbar-hide::-webkit-scrollbar { display:none; } .scrollbar-hide { -ms-overflow-style:none; scrollbar-width:none; }
+        #chat-msgs::-webkit-scrollbar { width:4px; } #chat-msgs::-webkit-scrollbar-thumb { background:rgba(129,140,248,.3); border-radius:2px; }
+
+        html { scroll-behavior:smooth; } section[id] { scroll-margin-top:8.5rem; }
+
+        .md h1,.md h2,.md h3 { font-weight:700; margin:.5em 0 .25em; line-height:1.3; }
+        .md h1{font-size:1em;color:#e2e8f0} .md h2{font-size:.9em;color:#cbd5e1} .md h3{font-size:.85em;color:#94a3b8}
+        .md p{margin:.4em 0;line-height:1.65} .md strong{font-weight:700;color:#f1f5f9} .md em{font-style:italic;color:#94a3b8}
+        .md ul,.md ol{padding-left:1.1em;margin:.4em 0} .md li{margin:.18em 0;line-height:1.55}
+        .md ul li{list-style:disc} .md ol li{list-style:decimal}
+        .md code{font-family:'JetBrains Mono',monospace;background:rgba(15,23,42,.7);border:1px solid #334155;border-radius:5px;padding:1px 5px;font-size:.85em;color:#a5b4fc}
+        .md pre{background:rgba(15,23,42,.9);border:1px solid #334155;border-radius:10px;padding:.6em .8em;margin:.4em 0;overflow-x:auto}
+        .md pre code{background:transparent;border:none;padding:0} .md a{color:#a5b4fc;text-decoration:underline}
+
+        .tag { font-family:'JetBrains Mono'; font-size:9px; font-weight:500; letter-spacing:.06em; padding:2px 7px; border-radius:6px; }
+        .tag-bom{background:rgba(52,211,153,.13);color:#6ee7b7;border:1px solid rgba(52,211,153,.32)}
+        .tag-ruim{background:rgba(251,113,133,.13);color:#fda4af;border:1px solid rgba(251,113,133,.32)}
+        .tag-outlier{background:rgba(251,191,36,.13);color:#fcd34d;border:1px solid rgba(251,191,36,.32)}
+        .tag-destaque{background:rgba(129,140,248,.13);color:#c7d2fe;border:1px solid rgba(129,140,248,.32)}
+    </style>
+</head>
+<body class="min-h-screen antialiased">
+
+<!-- BANNER EVACUAÇÃO -->
+<div id="banner-evacuacao"
+     class="{{ 'flex' if alerta_evacuacao_global else 'hidden' }} fixed top-0 inset-x-0 z-[100] items-center justify-center gap-3 bg-rose-600 py-2.5 px-6 shadow-2xl">
+    <span class="led pulse-soft" style="background:#fff"></span>
+    <span class="mono text-xs font-medium uppercase tracking-[0.18em] text-white">Risco de evacuação iminente — temperatura crítica + bateria solar baixa</span>
+</div>
+
+<!-- HEADER -->
+<header id="header" class="{{ 'mt-9' if alerta_evacuacao_global else '' }} sticky top-0 z-50 border-b border-white/5 bg-[#0a0e17]/85 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="relative flex items-center justify-center w-9 h-9 rounded-xl border border-indigo-400/30 bg-indigo-400/10">
+                <span class="display text-indigo-300 text-sm">M</span>
+                <span class="absolute -top-1 -right-1 led led-on pulse-soft"></span>
+            </div>
+            <div>
+                <p class="display text-[15px] text-slate-100 leading-tight">Mission Control <span class="text-indigo-300">AI</span></p>
+                <p class="mono text-[9px] tracking-[0.16em] text-slate-500 uppercase">Ground Segment · NEXUS-7</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="hidden md:block text-right">
+                <p class="mono text-[9px] tracking-widest text-slate-500 uppercase">Mission</p>
+                <p class="text-xs font-semibold text-indigo-200">{{ missao }}</p>
+            </div>
+            <div class="hidden sm:block text-right">
+                <p class="mono text-[9px] tracking-widest text-slate-500 uppercase">Crew</p>
+                <p class="text-xs font-semibold text-slate-300">{{ equipe }}</p>
+            </div>
+            <div class="text-right">
+                <p class="mono text-[9px] tracking-widest text-slate-500 uppercase">MET · UTC</p>
+                <p id="hud-clock" class="mono text-xs font-medium text-emerald-300">--:--:--</p>
+            </div>
+        </div>
+    </div>
+    <div class="border-t border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center gap-x-7 gap-y-1 flex-wrap mono text-[10px] tracking-wide">
+            <span class="flex items-center gap-1.5"><span class="led led-on pulse-soft"></span><span class="text-emerald-400">LINK ONLINE</span></span>
+            <span class="text-slate-500">CYCLES <span id="hud-ciclos" class="text-slate-200 font-medium">0</span></span>
+            <span class="text-slate-500">AVG RISK <span id="hud-risco" class="text-amber-300 font-medium">0.0</span></span>
+            <span class="text-slate-500">STATUS <span id="hud-status" class="text-emerald-300 font-medium">—</span></span>
+            <span class="text-slate-500">PWR BAL <span id="hud-balanco" class="text-indigo-300 font-medium">— Wh</span></span>
+        </div>
+    </div>
+</header>
+
+<!-- NAVBAR -->
+<nav class="sticky top-[6.0rem] z-40 bg-[#0a0e17]/88 backdrop-blur-md border-b border-white/5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+        <div class="flex items-center gap-1 overflow-x-auto py-2 scrollbar-hide">
+            <a href="#section-comando"     class="nav-link">Comando</a>
+            <a href="#section-resumo"      class="nav-link">Resumo</a>
+            <a href="#section-diagnostico" class="nav-link">Diagnóstico</a>
+            <a href="#section-medias"      class="nav-link">Médias</a>
+            <a href="#section-grafico"     class="nav-link">Gráficos</a>
+            <a href="#section-energetico"  class="nav-link">Energia</a>
+            <a href="#section-timeline"    class="nav-link">Timeline</a>
+            <a href="#section-stats"       class="nav-link">Estatística</a>
+            <a href="#chat-section"        class="nav-link">NEXUS-7</a>
+        </div>
+        <button onclick="window.scrollTo({top:0,behavior:'smooth'})"
+                class="hidden sm:flex items-center mono text-[10px] text-slate-500 hover:text-indigo-300 px-2 py-1 rounded transition-colors shrink-0">↑ topo</button>
+    </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-14">
+
+    <!-- ─── COMANDO ─────────────────────────────────── -->
+    <section id="section-comando" class="panel p-7 sm:p-8">
+        <div class="sec-label mb-7 pb-4 border-b border-white/5"><span class="idx">01</span> Painel de Comando</div>
+
+        <div class="rounded-2xl border border-indigo-400/20 bg-indigo-400/[0.04] p-6 mb-8">
+            <div class="flex items-center justify-between mb-5 flex-wrap gap-2">
+                <h3 class="text-sm font-semibold text-indigo-200">Gerador de Missão</h3>
+                <span class="mono text-[10px] text-slate-500">perfil · ciclos · seed · evento</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div>
+                    <label class="mono text-[10px] uppercase tracking-wider text-slate-400 block mb-2">Perfil</label>
+                    <select id="gen-perfil" class="w-full bg-slate-900/70 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-400">
+                        <option value="estavel">Estável</option>
+                        <option value="degradacao">Degradação</option>
+                        <option value="recuperacao">Recuperação</option>
+                        <option value="caotica">Caótica</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="mono text-[10px] uppercase tracking-wider text-slate-400 block mb-2">Ciclos · <span id="gen-n-label" class="text-indigo-300">10</span></label>
+                    <input type="range" id="gen-n" min="6" max="20" step="1" value="10" oninput="document.getElementById('gen-n-label').textContent=this.value" class="w-full mt-3.5">
+                </div>
+                <div>
+                    <label class="mono text-[10px] uppercase tracking-wider text-slate-400 block mb-2">Seed <span class="text-slate-600 normal-case">(vazio = aleatória)</span></label>
+                    <input type="number" id="gen-seed" placeholder="auto" class="w-full bg-slate-900/70 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 mono focus:outline-none focus:border-indigo-400">
+                </div>
+                <div>
+                    <label class="mono text-[10px] uppercase tracking-wider text-slate-400 block mb-2">Evento pontual</label>
+                    <div class="flex gap-2">
+                        <select id="gen-ev-tipo" class="flex-1 bg-slate-900/70 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-400">
+                            <option value="">nenhum</option>
+                            <option value="pico_termico">Pico térmico</option>
+                            <option value="falha_comunicacao">Falha de comms</option>
+                            <option value="queda_bateria">Queda de bateria</option>
+                            <option value="vazamento_o2">Vazamento O₂</option>
+                            <option value="instabilidade">Instabilidade</option>
+                        </select>
+                        <input type="number" id="gen-ev-ciclo" min="1" max="20" value="3" title="ciclo do evento" class="w-14 bg-slate-900/70 border border-slate-700 rounded-xl px-2 py-2.5 text-sm text-slate-200 mono text-center focus:outline-none focus:border-indigo-400">
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-3 mt-6">
+                <button id="btn-gerar" onclick="gerarSimulacao(false)"
+                        class="flex-1 min-w-[200px] py-3 bg-indigo-500 hover:bg-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-indigo-900/30 active:scale-[.98]">
+                    Gerar Simulação
+                </button>
+                <button id="btn-reseed" onclick="gerarSimulacao(true)" title="Repetir com a última seed"
+                        class="px-5 py-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-medium rounded-xl transition-all active:scale-[.98]">
+                    ↻ Repetir seed
+                </button>
+            </div>
+            <p id="status-gerar" class="mono text-xs mt-4 min-h-[1.25rem]"></p>
+            <div id="narrativa-box" class="hidden mt-5 rounded-2xl border border-indigo-400/25 bg-indigo-400/[0.05] p-5">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="led led-accent pulse-soft"></span>
+                    <span class="mono text-[10px] uppercase tracking-[0.14em] text-indigo-300">Análise de Missão · NEXUS-7</span>
+                </div>
+                <p id="narrativa-txt" class="text-sm text-slate-300 leading-relaxed"></p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="flex flex-col justify-between gap-5 rounded-2xl border border-white/5 bg-white/[0.015] p-6">
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-200 mb-1.5">Ciclo Único Automático</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">Gera um ciclo aleatório, processa via IA (Llama 3.1) e persiste. Use o gerador acima para lotes.</p>
+                </div>
+                <button id="btn-simular" onclick="simularCiclo()"
+                        class="w-full py-3 bg-slate-100 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed text-slate-900 text-sm font-semibold rounded-xl transition-all active:scale-[.98]">
+                    Simular Ciclo
+                </button>
+                <p id="status-simular" class="mono text-xs min-h-[1.25rem]"></p>
+            </div>
+
+            <div class="rounded-2xl border border-white/5 bg-white/[0.015] p-6">
+                <h3 class="text-sm font-semibold text-slate-200 mb-4">Injeção Manual</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center gap-3">
+                        <label class="mono text-[10px] text-slate-400 w-28 shrink-0">TEMP °C</label>
+                        <input type="range" id="sl-temp" min="20" max="45" step="0.5" value="25" oninput="syncSlider('sl-temp','num-temp')" class="flex-1">
+                        <input type="number" id="num-temp" min="20" max="45" step="0.5" value="25" oninput="syncSlider('num-temp','sl-temp')" class="w-16 bg-slate-900/70 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center text-slate-200 mono focus:outline-none focus:border-indigo-400">
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <label class="mono text-[10px] text-slate-400 w-28 shrink-0">SINAL %</label>
+                        <input type="range" id="sl-com" min="10" max="100" step="1" value="80" oninput="syncSlider('sl-com','num-com')" class="flex-1">
+                        <input type="number" id="num-com" min="10" max="100" step="1" value="80" oninput="syncSlider('num-com','sl-com')" class="w-16 bg-slate-900/70 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center text-slate-200 mono focus:outline-none focus:border-indigo-400">
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <label class="mono text-[10px] text-slate-400 w-28 shrink-0">BATERIA %</label>
+                        <input type="range" id="sl-bat" min="10" max="100" step="1" value="70" oninput="syncSlider('sl-bat','num-bat')" class="flex-1">
+                        <input type="number" id="num-bat" min="10" max="100" step="1" value="70" oninput="syncSlider('num-bat','sl-bat')" class="w-16 bg-slate-900/70 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center text-slate-200 mono focus:outline-none focus:border-indigo-400">
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <label class="mono text-[10px] text-slate-400 w-28 shrink-0">O₂ L/min</label>
+                        <input type="range" id="sl-o2" min="7" max="13" step="0.1" value="8.5" oninput="syncSlider('sl-o2','num-o2')" class="flex-1">
+                        <input type="number" id="num-o2" min="7" max="13" step="0.1" value="8.5" oninput="syncSlider('num-o2','sl-o2')" class="w-16 bg-slate-900/70 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center text-slate-200 mono focus:outline-none focus:border-indigo-400">
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <label class="mono text-[10px] text-slate-400 w-28 shrink-0">MATRIZ %</label>
+                        <input type="range" id="sl-mat" min="20" max="100" step="1" value="85" oninput="syncSlider('sl-mat','num-mat')" class="flex-1">
+                        <input type="number" id="num-mat" min="20" max="100" step="1" value="85" oninput="syncSlider('num-mat','sl-mat')" class="w-16 bg-slate-900/70 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center text-slate-200 mono focus:outline-none focus:border-indigo-400">
+                    </div>
+                </div>
+                <button id="btn-manual" onclick="injetarManual()"
+                        class="mt-5 w-full py-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-100 text-sm font-semibold rounded-xl transition-all active:scale-[.98]">
+                    Injetar Telemetria
+                </button>
+                <p id="status-manual" class="mono text-xs mt-3 min-h-[1.25rem]"></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── RESUMO (Fase 4) ─────────────────────────── -->
+    <section id="section-resumo">
+        <div class="sec-label mb-5"><span class="idx">02</span> Sumário Operacional</div>
+        <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="panel p-5">
+                <p class="mono text-[10px] uppercase tracking-widest text-slate-500 mb-2">Classificação atual</p>
+                <h3 id="sum-classificacao" class="text-sm font-bold text-emerald-300">—</h3>
+                <p id="sum-justificativa" class="text-[11px] text-slate-500 mt-1 leading-snug"></p>
+            </div>
+            <div class="panel p-5">
+                <p class="mono text-[10px] uppercase tracking-widest text-slate-500 mb-2">Tendência</p>
+                <h3 id="sum-tendencia" class="text-sm font-semibold text-slate-100">{{ consolidado.tendencia.split('(')[0] }}</h3>
+            </div>
+            <div class="panel p-5">
+                <p class="mono text-[10px] uppercase tracking-widest text-slate-500 mb-2">Módulo Crítico</p>
+                <h3 id="sum-modulo" class="text-sm font-semibold text-rose-300">{{ consolidado.area_mais_afetada }}</h3>
+            </div>
+            <div class="panel p-5">
+                <p class="mono text-[10px] uppercase tracking-widest text-slate-500 mb-2">Risco Médio</p>
+                <h3 class="display text-3xl text-amber-300"><span id="sum-risco-medio">0.0</span><span class="text-xs text-slate-600 ml-1">/10</span></h3>
+            </div>
+            <div class="panel p-5">
+                <p class="mono text-[10px] uppercase tracking-widest text-slate-500 mb-2">Ciclos Críticos</p>
+                <h3 class="display text-3xl text-rose-300"><span id="sum-criticos">0</span><span class="text-xs text-slate-600 ml-1">/<span id="sum-total">0</span></span></h3>
+            </div>
+            <div class="panel p-5">
+                <p class="mono text-[10px] uppercase tracking-widest text-slate-500 mb-2">Balanço Energético</p>
+                <h3 class="display text-2xl"><span id="sum-balanco" class="text-indigo-300">—</span><span class="text-xs text-slate-600 ml-1">Wh</span></h3>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── DIAGNÓSTICO OPERACIONAL (Fase 4) ─────────── -->
+    <section id="section-diagnostico">
+        <div class="sec-label mb-5"><span class="idx">03</span> Diagnóstico Operacional <span class="mono text-[10px] text-slate-600 font-normal">· último ciclo</span></div>
+        <div id="diagnostico-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            <div class="panel p-5 text-slate-500 text-xs">Carregando diagnóstico…</div>
+        </div>
+    </section>
+
+    <!-- ─── MÉDIAS (Fase 4 · TASK-017) ──────────────── -->
+    <section id="section-medias" class="panel p-7 sm:p-8">
+        <div class="sec-label mb-6 pb-4 border-b border-white/5"><span class="idx">04</span> Médias de Sustentabilidade</div>
+        <div id="medias-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {% for area, media in consolidado.medias.items() %}
+            <div class="rounded-2xl border border-white/5 bg-white/[0.015] p-5">
+                <p class="mono text-[10px] uppercase tracking-wider text-slate-500 truncate mb-2" title="{{ area }}">{{ area }}</p>
+                <p class="display text-2xl text-slate-100">{{ media }}<span class="mono text-[10px] font-normal text-slate-500 ml-1">{% if "Temperatura" in area %}°C{% elif "xig" in area %}L/m{% else %}%{% endif %}</span></p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- ─── GRÁFICOS (Fase 5.1) ─────────────────────── -->
+    <section id="section-grafico" class="space-y-6">
+        <div class="sec-label"><span class="idx">05</span> Dashboards de Telemetria</div>
+        <div class="panel p-7">
+            <p class="text-xs font-medium text-slate-400 mb-5">Evolução dos 5 parâmetros</p>
+            <div style="position:relative;height:300px;"><canvas id="grafico"></canvas></div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="panel p-7">
+                <p class="text-xs font-medium text-slate-400 mb-5">Risco por ciclo <span class="text-slate-600">· cor = classificação</span></p>
+                <div style="position:relative;height:260px;"><canvas id="grafico-risco"></canvas></div>
+            </div>
+            <div class="panel p-7">
+                <p class="text-xs font-medium text-slate-400 mb-5">Pontuação acumulada por área</p>
+                <div style="position:relative;height:260px;"><canvas id="grafico-area"></canvas></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── ENERGIA (Fase 5.2 · SERS) ───────────────── -->
+    <section id="section-energetico" class="space-y-6">
+        <div class="sec-label"><span class="idx">06</span> Subsistema Energético</div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="panel p-5"><p class="mono text-[10px] uppercase tracking-widest text-slate-500 mb-2">Balanço Total</p><h3 class="display text-2xl"><span id="en-balanco" class="text-indigo-300">—</span><span class="text-[10px] text-slate-600 ml-1">Wh</span></h3></div>
+            <div class="panel p-5"><p class="mono text-[10px] uppercase tracking-widest text-slate-500 mb-2">Consumo Médio</p><h3 class="display text-2xl text-slate-100"><span id="en-consumo">—</span><span class="text-[10px] text-slate-600 ml-1">W</span></h3></div>
+            <div class="panel p-5"><p class="mono text-[10px] uppercase tracking-widest text-slate-500 mb-2">Pico de Consumo</p><h3 class="display text-2xl text-amber-300"><span id="en-pico">—</span><span class="text-[10px] text-slate-600 ml-1">W</span></h3></div>
+            <div class="panel p-5"><p class="mono text-[10px] uppercase tracking-widest text-slate-500 mb-2">Menor Eficiência</p><h3 class="display text-2xl text-rose-300"><span id="en-eficiencia">—</span><span class="text-[10px] text-slate-600 ml-1">%</span></h3></div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="panel p-7">
+                <p class="text-xs font-medium text-slate-400 mb-5">Energia: consumida vs gerada</p>
+                <div style="position:relative;height:250px;"><canvas id="grafico-energia"></canvas></div>
+            </div>
+            <div class="panel p-7">
+                <p class="text-xs font-medium text-slate-400 mb-5">Potência (W) &amp; corrente (A)</p>
+                <div style="position:relative;height:250px;"><canvas id="grafico-potencia"></canvas></div>
+            </div>
+        </div>
+        <div class="panel p-6">
+            <p class="mono text-[10px] uppercase tracking-[0.14em] text-indigo-300 mb-2">Recomendação energética automatizada</p>
+            <p id="en-recomendacao" class="text-sm text-slate-300 leading-relaxed">Aguardando dados energéticos…</p>
+        </div>
+    </section>
+
+    <!-- ─── TIMELINE (Fase 5.3) ─────────────────────── -->
+    <section id="section-timeline" class="space-y-5">
+        <div class="sec-label"><span class="idx">07</span> Linha do Tempo</div>
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <button class="chip-filtro chip-on" onclick="setFiltroTimeline('Todos',this)">Todos</button>
+                <button class="chip-filtro" onclick="setFiltroTimeline('Estável',this)">Estáveis</button>
+                <button class="chip-filtro" onclick="setFiltroTimeline('Atenção',this)">Atenção</button>
+                <button class="chip-filtro" onclick="setFiltroTimeline('Crítico',this)">Críticos</button>
+                <button class="chip-filtro" onclick="setFiltroTimeline('Recuperação',this)">Recuperação</button>
+                <button class="chip-filtro" onclick="setFiltroTimeline('Outlier',this)">Outliers</button>
+                <button class="chip-filtro" onclick="setFiltroTimeline('Correlacionado',this)">Correlacionados</button>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="btn-ver-todos" onclick="toggleVerTodos()" class="mono text-[10px] px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors">Ver todos os ciclos</button>
+                <button onclick="exportarRelatorio()" class="mono text-[10px] px-3 py-1.5 bg-indigo-500/90 hover:bg-indigo-400 text-white rounded-lg transition-colors">⬇ Relatório .txt</button>
+            </div>
+        </div>
+        <div id="mural-alertas" class="panel p-5 hidden">
+            <p class="text-xs font-medium text-slate-400 mb-3">Alertas analíticos da missão</p>
+            <div id="mural-lista" class="flex flex-wrap gap-2"></div>
+        </div>
+        <p id="timeline-dica" class="mono text-[10px] text-slate-600">Exibindo apenas ciclos relevantes (críticos, recuperações, outliers, correlacionados e estáveis). Clique em um card para ver os detalhes.</p>
+        <div id="timeline" class="space-y-3">
+            {% for ciclo in ciclos | reverse %}
+            <div class="ciclo-card panel p-5" data-ciclo="{{ ciclo.ciclo }}" data-tipo="{{ ciclo.tipo_evento }}" data-risco="{{ ciclo.risco }}">
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <span class="mono px-2.5 py-1 bg-indigo-400/10 border border-indigo-400/25 text-indigo-200 rounded-lg text-[11px] font-medium">CYC-{{ '%02d' % ciclo.ciclo }}</span>
+                        <span class="mono text-[10px] text-slate-500">{{ ciclo.tipo_evento }}</span>
+                        {% if ciclo.alerta_evacuacao %}<span class="tag tag-ruim">EVACUAÇÃO</span>{% endif %}
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-slate-400">{{ ciclo.classificacao }}</span>
+                        <span class="mono px-2.5 py-0.5 rounded-lg text-xs font-medium {{ 'bg-rose-500/90 text-rose-950' if ciclo.risco >= 6 else ('bg-amber-500/90 text-amber-950' if ciclo.risco >= 1 else 'bg-emerald-500/90 text-emerald-950') }}">{{ ciclo.risco }}/10</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- ─── ESTATÍSTICA ─────────────────────────────── -->
+    <section id="section-stats" class="panel p-7 sm:p-8">
+        <div class="flex items-center justify-between pb-4 mb-6 border-b border-white/5">
+            <div class="sec-label"><span class="idx">08</span> Análise Estatística Descritiva</div>
+            <button onclick="carregarEstatisticas()" id="btn-stats" class="mono text-[10px] px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors">atualizar</button>
+        </div>
+        <div id="stats-container" class="mono text-xs text-slate-500 text-center py-4">Carregando estatísticas…</div>
+    </section>
+
+    <!-- ─── CHAT ────────────────────────────────────── -->
+    <section id="chat-section" class="panel p-7 sm:p-8">
+        <div class="sec-label mb-5 pb-4 border-b border-white/5"><span class="idx">09</span> Canal Direto · NEXUS-7</div>
+        <div id="chat-msgs" class="space-y-3 mb-5 max-h-72 overflow-y-auto pr-1 min-h-[3rem]"></div>
+        <div class="flex gap-3">
+            <input id="chat-input" type="text" placeholder="Consulta técnica ao sistema de IA…"
+                   class="flex-1 bg-slate-900/70 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-400 transition-colors" />
+            <button onclick="enviarChat()" class="px-6 py-3 bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-semibold rounded-xl transition-colors active:scale-[.98]">Enviar</button>
+        </div>
+    </section>
+</main>
+
+<footer class="border-t border-white/5 py-7 mt-14 text-center">
+    <p class="mono text-[10px] tracking-widest text-slate-600 uppercase">Mission Control AI · {{ missao }} · {{ equipe }} · FIAP Global Solution 2026.1</p>
+</footer>
+
+<!-- ─── MODAL DE DETALHE DO CICLO ─────────────────── -->
+<div id="modal-ciclo" class="hidden fixed inset-0 z-[150] items-center justify-center bg-black/70 backdrop-blur-sm p-4" onclick="if(event.target===this)fecharModal()">
+    <div class="panel w-full max-w-lg p-6 max-h-[85vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+            <h3 id="modal-titulo" class="text-sm font-semibold text-slate-100">Ciclo</h3>
+            <button onclick="fecharModal()" class="text-slate-500 hover:text-slate-200 text-2xl leading-none">&times;</button>
+        </div>
+        <div id="modal-body"></div>
+    </div>
+</div>
+
+<!-- ─── COPILOTO ──────────────────────────────────── -->
+<div class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+    <div id="copilot-popup" class="hidden panel p-5 shadow-2xl" style="width:300px">
+        <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2"><span class="led led-accent pulse-soft"></span><span class="mono text-[10px] font-medium uppercase tracking-widest text-indigo-300">NEXUS-7 · Copiloto</span></div>
+            <button onclick="toggleCopiloto()" class="text-slate-600 hover:text-slate-300 text-xl leading-none">&times;</button>
+        </div>
+        <p id="copilot-sugestao" class="text-xs text-slate-300 leading-relaxed mb-4 min-h-[3rem]">Analisando telemetria…</p>
+        <button onclick="enviarSugestaoParaChat()" class="w-full py-2.5 bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-semibold rounded-xl transition-colors active:scale-[.98]">Enviar ao Chat →</button>
+    </div>
+    <button onclick="toggleCopiloto()" title="Copiloto" class="w-14 h-14 bg-indigo-500 hover:bg-indigo-400 rounded-full flex items-center justify-center shadow-2xl shadow-indigo-900/50 hover:scale-105 transition-all">
+        <span class="text-2xl leading-none">🛰️</span>
+    </button>
+</div>
+
+<script>
+/* ── DATA ───────────────────────────────────────────── */
+const CICLOS_DATA = {{ ciclos | tojson }};
+const NOME_IA = 'NEXUS-7';
+const AREAS_JS = ['Temperatura interna','Comunicação com a base','Sistema de energia','Suporte de oxigênio','Estabilidade operacional'];
+let ultimaSeed = null;
+let filtroTimeline = 'Todos';
+let verTodos = false;
+
+/* ── THEME helpers p/ Chart.js ──────────────────────── */
+const GRID = 'rgba(148,163,184,0.08)';
+const TICK = '#8a97ad';
+const PARC = ['#fbbf24','#60a5fa','#34d399','#a78bfa','#f472b6'];
+const axBase = { ticks:{ color:TICK, font:{ size:10, family:'JetBrains Mono' } }, grid:{ color:GRID } };
+
+/* ── HELPERS ────────────────────────────────────────── */
+function escHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function syncSlider(srcId,dstId){ document.getElementById(dstId).value = document.getElementById(srcId).value; }
+function corBadge(r){ return r >= 6 ? 'bg-rose-500/90 text-rose-950' : r >= 1 ? 'bg-amber-500/90 text-amber-950' : 'bg-emerald-500/90 text-emerald-950'; }
+function scoreParam(i,v){
+    if(i===0) return v<=30?0:v<=38?1:2;
+    if(i===1) return v>=70?0:v>=40?1:2;
+    if(i===2) return v>=60?0:v>=25?1:2;
+    if(i===3) return v<=9?0:v<=11?1:2;
+    return v>=80?0:v>=50?1:2;
+}
+function corRiscoBar(r){ return r>=6 ? 'rgba(251,113,133,.8)' : r>=1 ? 'rgba(251,191,36,.8)' : 'rgba(52,211,153,.8)'; }
+function classificacaoMissao(r){ return r===0 ? 'MISSÃO ESTÁVEL' : r<=5 ? 'MISSÃO EM ATENÇÃO' : 'MISSÃO CRÍTICA'; }
+
+const TIPO_STYLE = { 'Estável':'tag-bom','Atenção':'tag-outlier','Crítico':'tag-ruim','Recuperação':'tag-bom','Outlier':'tag-outlier','Correlacionado':'tag-ruim' };
+const TIPOS_RELEVANTES = ['Estável','Crítico','Recuperação','Outlier','Correlacionado']; // oculta "Atenção" por padrão
+
+/* ── LEITURA INTELIGENTE DA SÉRIE (client) ──────────── */
+function analisarSerie(){
+    const data = CICLOS_DATA, n = data.length;
+    const stats = [0,1,2,3,4].map(p=>{
+        const col = data.map(c=>c.valores[p]);
+        const m = col.reduce((a,b)=>a+b,0)/n;
+        const sd = Math.sqrt(col.reduce((a,b)=>a+(b-m)**2,0)/n);
+        return [m,sd];
+    });
+    return data.map((c,i)=>{
+        const r = c.risco; const tags = [];
+        if(r<=1) tags.push('BOM');
+        if(r>=6) tags.push('RUIM');
+        const out = [0,1,2,3,4].some(p=>stats[p][1]>0 && Math.abs(c.valores[p]-stats[p][0])>2*stats[p][1]);
+        if(out) tags.push('OUTLIER');
+        if(i>0 && Math.abs(r-data[i-1].risco)>=4) tags.push('DESTAQUE');
+        const nCrit = [0,1,2,3,4].filter(p=>scoreParam(p,c.valores[p])===2).length;
+        const anomalias = [0,1,2,3,4].filter(p=>scoreParam(p,c.valores[p])>=1).length;
+        let tipo;
+        if(nCrit>=2) tipo='Correlacionado';
+        else if(out) tipo='Outlier';
+        else if(i>0 && data[i-1].risco>=6 && r<=5) tipo='Recuperação';
+        else if(r>=6) tipo='Crítico';
+        else if(r>=1) tipo='Atenção';
+        else tipo='Estável';
+        return { tags, tipo, anomalias, classificacao: c.classificacao || classificacaoMissao(r) };
+    });
+}
+
+/* ── CHARTS ─────────────────────────────────────────── */
+const labels0 = CICLOS_DATA.map(c=>'C'+c.ciclo);
+const grafico = new Chart(document.getElementById('grafico'), {
+    type:'line',
+    data:{ labels:[...labels0], datasets:[
+        { label:'Temp °C',  data:CICLOS_DATA.map(c=>c.valores[0]), borderColor:PARC[0], backgroundColor:'transparent', tension:.35, pointRadius:2, yAxisID:'y2' },
+        { label:'Sinal %',  data:CICLOS_DATA.map(c=>c.valores[1]), borderColor:PARC[1], backgroundColor:'transparent', tension:.35, pointRadius:2, yAxisID:'y' },
+        { label:'Bateria %',data:CICLOS_DATA.map(c=>c.valores[2]), borderColor:PARC[2], backgroundColor:'transparent', tension:.35, pointRadius:2, yAxisID:'y' },
+        { label:'O₂ L/m',   data:CICLOS_DATA.map(c=>c.valores[3]), borderColor:PARC[3], backgroundColor:'transparent', tension:.35, pointRadius:2, yAxisID:'y2' },
+        { label:'Matriz %', data:CICLOS_DATA.map(c=>c.valores[4]), borderColor:PARC[4], backgroundColor:'transparent', tension:.35, pointRadius:2, yAxisID:'y' },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+        plugins:{ legend:{ labels:{ color:'#94a3b8', font:{size:10,family:'JetBrains Mono'}, boxWidth:10, padding:14, usePointStyle:true } } },
+        scales:{ x:axBase,
+            y:{ ...axBase, position:'left', min:0, max:100, title:{display:true,text:'%',color:TICK,font:{size:10}} },
+            y2:{ position:'right', min:0, max:50, ticks:{color:PARC[0],font:{size:10,family:'JetBrains Mono'}}, grid:{drawOnChartArea:false}, title:{display:true,text:'°C · L/m',color:PARC[0],font:{size:10}} }
+        }
+    }
+});
+const graficoRisco = new Chart(document.getElementById('grafico-risco'), {
+    type:'bar',
+    data:{ labels:[...labels0], datasets:[{ label:'Risco', data:CICLOS_DATA.map(c=>c.risco), backgroundColor:CICLOS_DATA.map(c=>corRiscoBar(c.risco)), borderRadius:4 }]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:axBase, y:{ ...axBase, min:0, max:10 } } }
+});
+const graficoArea = new Chart(document.getElementById('grafico-area'), {
+    type:'doughnut',
+    data:{ labels:AREAS_JS, datasets:[{ data:[1,1,1,1,1], backgroundColor:PARC, borderColor:'#0a0e17', borderWidth:3 }]},
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{ legend:{ position:'right', labels:{ color:'#94a3b8', font:{size:9,family:'JetBrains Mono'}, boxWidth:9, padding:9, usePointStyle:true } } } }
+});
+const graficoEnergia = new Chart(document.getElementById('grafico-energia'), {
+    type:'line',
+    data:{ labels:[], datasets:[
+        { label:'Consumo Wh', data:[], borderColor:'#fb7185', backgroundColor:'rgba(251,113,133,.10)', fill:true, tension:.35, pointRadius:2 },
+        { label:'Geração Wh', data:[], borderColor:'#34d399', backgroundColor:'rgba(52,211,153,.10)', fill:true, tension:.35, pointRadius:2 },
+        { label:'Balanço Wh', data:[], borderColor:'#818cf8', backgroundColor:'transparent', tension:.35, pointRadius:2, borderDash:[4,3] },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+        plugins:{ legend:{ labels:{ color:'#94a3b8', font:{size:10,family:'JetBrains Mono'}, boxWidth:10, padding:14, usePointStyle:true } } }, scales:{ x:axBase, y:axBase } }
+});
+const graficoPotencia = new Chart(document.getElementById('grafico-potencia'), {
+    type:'line',
+    data:{ labels:[], datasets:[
+        { label:'Potência W', data:[], borderColor:'#fbbf24', backgroundColor:'transparent', tension:.35, pointRadius:2, yAxisID:'y' },
+        { label:'Corrente A', data:[], borderColor:'#60a5fa', backgroundColor:'transparent', tension:.35, pointRadius:2, yAxisID:'y1' },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+        plugins:{ legend:{ labels:{ color:'#94a3b8', font:{size:10,family:'JetBrains Mono'}, boxWidth:10, padding:14, usePointStyle:true } } },
+        scales:{ x:axBase, y:{ ...axBase, position:'left' }, y1:{ position:'right', ticks:{color:'#60a5fa',font:{size:10,family:'JetBrains Mono'}}, grid:{drawOnChartArea:false} } } }
+});
+
+function redesenharCharts(){
+    const labels = CICLOS_DATA.map(c=>'C'+c.ciclo);
+    grafico.data.labels = labels;
+    [0,1,2,3,4].forEach(p=>{ grafico.data.datasets[p].data = CICLOS_DATA.map(c=>c.valores[p]); });
+    grafico.update('none');
+    graficoRisco.data.labels = labels;
+    graficoRisco.data.datasets[0].data = CICLOS_DATA.map(c=>c.risco);
+    graficoRisco.data.datasets[0].backgroundColor = CICLOS_DATA.map(c=>corRiscoBar(c.risco));
+    graficoRisco.update('none');
+    const pontos = [0,0,0,0,0];
+    CICLOS_DATA.forEach(c=>c.valores.forEach((v,i)=>{ pontos[i]+=scoreParam(i,v); }));
+    graficoArea.data.datasets[0].data = pontos.map(p=>p||0.001);
+    graficoArea.update('none');
+}
+
+/* ── RESUMO + MÉDIAS (Fase 4) ───────────────────────── */
+function atualizarResumo(){
+    const n = CICLOS_DATA.length;
+    document.getElementById('hud-ciclos').textContent = n;
+    document.getElementById('sum-total').textContent = n;
+    if(!n) return;
+    const somas=[0,0,0,0,0], pontos=[0,0,0,0,0];
+    let somaRisco=0, criticos=0;
+    CICLOS_DATA.forEach(c=>{
+        c.valores.forEach((v,i)=>{ somas[i]+=v; pontos[i]+=scoreParam(i,v); });
+        somaRisco+=c.risco; if(c.risco>=6) criticos++;
+    });
+    const ultimo = CICLOS_DATA[n-1];
+    const r0=CICLOS_DATA[0].risco, rn=ultimo.risco;
+    const tend = rn>r0 ? 'Degradação' : rn<r0 ? 'Recuperação' : 'Estável';
+    const idxMax = pontos.indexOf(Math.max(...pontos));
+    const riscoMedio = (somaRisco/n).toFixed(1);
+    const classe = ultimo.classificacao || classificacaoMissao(ultimo.risco);
+
+    document.getElementById('sum-tendencia').textContent = tend;
+    document.getElementById('sum-modulo').textContent = AREAS_JS[idxMax];
+    document.getElementById('sum-risco-medio').textContent = riscoMedio;
+    document.getElementById('sum-criticos').textContent = criticos;
+    document.getElementById('hud-risco').textContent = riscoMedio;
+
+    const elc = document.getElementById('sum-classificacao');
+    elc.textContent = classe;
+    elc.className = 'text-sm font-bold ' + (ultimo.risco>=6 ? 'text-rose-300' : ultimo.risco>=1 ? 'text-amber-300' : 'text-emerald-300');
+    document.getElementById('sum-justificativa').textContent = ultimo.justificativa || '';
+    const hs = document.getElementById('hud-status');
+    hs.textContent = classe.replace('MISSÃO ','');
+    hs.className = (ultimo.risco>=6 ? 'text-rose-300' : ultimo.risco>=1 ? 'text-amber-300' : 'text-emerald-300') + ' font-medium';
+
+    const unidade = a => a.includes('Temperatura') ? '°C' : a.includes('xig') ? 'L/m' : '%';
+    document.getElementById('medias-grid').innerHTML = AREAS_JS.map((a,i)=>`
+        <div class="rounded-2xl border border-white/5 bg-white/[0.015] p-5">
+            <p class="mono text-[10px] uppercase tracking-wider text-slate-500 truncate mb-2" title="${escHtml(a)}">${escHtml(a)}</p>
+            <p class="display text-2xl text-slate-100">${(somas[i]/n).toFixed(2)}<span class="mono text-[10px] font-normal text-slate-500 ml-1">${unidade(a)}</span></p>
+        </div>`).join('');
+}
+
+/* ── DIAGNÓSTICO OPERACIONAL (Fase 4) ───────────────── */
+async function atualizarDiagnostico(){
+    try{
+        const r = await fetch('/api/diagnostico'); const d = await r.json();
+        const grid = document.getElementById('diagnostico-grid'); if(!grid) return;
+        if(!d.variaveis || !d.variaveis.length){ grid.innerHTML=''; return; }
+        const estilo = s => s===2 ? ['border-rose-500/40','text-rose-300','bg-rose-500/15']
+                          : s===1 ? ['border-amber-500/40','text-amber-300','bg-amber-500/15']
+                                  : ['border-emerald-500/40','text-emerald-300','bg-emerald-500/15'];
+        grid.innerHTML = d.variaveis.map(v=>{
+            const [bd,tx,bg] = estilo(v.score);
+            const val = v.unidade==='%' ? `${v.valor}%` : `${v.valor} ${v.unidade}`;
+            return `<div class="panel ${bd} p-5">
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-sm font-semibold text-slate-200">${escHtml(v.nome)}</p>
+                    <span class="tag ${bg} ${tx}">${escHtml(v.status)}</span>
+                </div>
+                <p class="display text-3xl text-slate-100 mb-3">${escHtml(String(val))}</p>
+                <div class="space-y-1.5 text-[11px]">
+                    <div class="flex justify-between gap-2"><span class="text-slate-500">Faixa ideal</span><span class="text-slate-300 mono">${escHtml(v.faixa_ideal)}</span></div>
+                    <div class="flex justify-between gap-2"><span class="text-slate-500 shrink-0">Impacto</span><span class="text-slate-300 text-right">${escHtml(v.impacto)}</span></div>
+                    <div class="flex justify-between gap-2"><span class="text-slate-500 shrink-0">Ação</span><span class="${tx} text-right">${escHtml(v.recomendacao)}</span></div>
+                </div>
+            </div>`;
+        }).join('');
+    }catch(_){}
+}
+
+/* ── ENERGIA + ALERTAS (fetch) ──────────────────────── */
+async function atualizarEnergia(){
+    try{
+        const r = await fetch('/api/energetico'); const d = await r.json();
+        const pc = d.por_ciclo || [], res = d.resumo || {};
+        const labels = pc.map(x=>'C'+x.ciclo);
+        graficoEnergia.data.labels = labels;
+        graficoEnergia.data.datasets[0].data = pc.map(x=>x.energia_Wh);
+        graficoEnergia.data.datasets[1].data = pc.map(x=>x.geracao_Wh);
+        graficoEnergia.data.datasets[2].data = pc.map(x=>x.balanco_Wh);
+        graficoEnergia.update('none');
+        graficoPotencia.data.labels = labels;
+        graficoPotencia.data.datasets[0].data = pc.map(x=>x.potencia_W);
+        graficoPotencia.data.datasets[1].data = pc.map(x=>x.corrente_A);
+        graficoPotencia.update('none');
+        const bal = res.balanco_total_Wh ?? 0;
+        const elBal = document.getElementById('en-balanco');
+        elBal.textContent = (bal>=0?'+':'') + bal; elBal.className = bal>=0 ? 'text-indigo-300' : 'text-rose-400';
+        document.getElementById('en-consumo').textContent = res.consumo_medio_W ?? '—';
+        document.getElementById('en-pico').textContent = res.pico_consumo_W ?? '—';
+        document.getElementById('en-eficiencia').textContent = res.menor_eficiencia_pct ?? '—';
+        document.getElementById('en-recomendacao').textContent = res.recomendacao || '—';
+        const hb = document.getElementById('hud-balanco');
+        hb.textContent = (bal>=0?'+':'') + bal + ' Wh';
+        hb.className = bal>=0 ? 'text-indigo-300 font-medium' : 'text-rose-300 font-medium';
+    }catch(_){}
+}
+async function atualizarMural(){
+    try{
+        const r = await fetch('/api/alertas'); const d = await r.json();
+        const lista = d.alertas || [];
+        const mural = document.getElementById('mural-alertas'), box = document.getElementById('mural-lista');
+        if(!lista.length){ mural.classList.add('hidden'); return; }
+        mural.classList.remove('hidden');
+        const cor = { OUTLIER:'tag-outlier', TENDENCIA_NEGATIVA:'tag-ruim', RECUPERACAO:'tag-bom', CORRELACIONADO:'tag-ruim', ANOMALIA_ENERGETICA:'tag-outlier' };
+        box.innerHTML = lista.map(a=>`<span class="tag ${cor[a.tipo]||'tag-destaque'}" title="${escHtml(a.detalhe)}">C${a.ciclo} · ${escHtml(a.tipo.replace(/_/g,' '))}</span>`).join('');
+    }catch(_){}
+}
+
+/* ── TIMELINE (Fase 5: cards clicáveis + filtros + modal) ── */
+function cardTimelineHTML(c, m){
+    const tipoCls = TIPO_STYLE[m.tipo] || 'tag-destaque';
+    const evac = c.alerta_evacuacao ? `<span class="tag tag-ruim pulse-soft">EVACUAÇÃO</span>` : '';
+    const classCor = c.risco>=6 ? 'text-rose-300' : c.risco>=1 ? 'text-amber-300' : 'text-emerald-300';
+    return `<button type="button" onclick="abrirModalCiclo(${c.ciclo})"
+        class="ciclo-card panel w-full text-left p-5 hover:border-indigo-400/40 transition-colors block"
+        data-ciclo="${c.ciclo}" data-tipo="${m.tipo}" data-risco="${c.risco}">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <span class="mono px-2.5 py-1 bg-indigo-400/10 border border-indigo-400/25 text-indigo-200 rounded-lg text-[11px] font-medium">CYC-${String(c.ciclo).padStart(2,'0')}</span>
+                <span class="tag ${tipoCls}">${m.tipo}</span>
+                ${evac}
+                <span class="mono text-[10px] text-slate-600">${escHtml(c.timestamp)}</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="mono text-[10px] text-slate-500">${m.anomalias} anomalia(s)</span>
+                <span class="text-xs font-semibold ${classCor} hidden sm:inline">${escHtml(c.classificacao || m.classificacao)}</span>
+                <span class="mono px-2.5 py-0.5 rounded-lg text-xs font-medium ${corBadge(c.risco)}">${c.risco}/10</span>
+                <span class="text-slate-600">›</span>
+            </div>
+        </div>
+    </button>`;
+}
+function renderTimeline(){
+    const meta = analisarSerie();
+    const tl = document.getElementById('timeline');
+    const html = [];
+    for(let i=CICLOS_DATA.length-1; i>=0; i--) html.push(cardTimelineHTML(CICLOS_DATA[i], meta[i]));
+    tl.innerHTML = html.join('');
+    aplicarFiltroTimeline();
+}
+function aplicarFiltroTimeline(){
+    let visiveis = 0;
+    document.querySelectorAll('#timeline .ciclo-card').forEach(card=>{
+        const tipo = card.dataset.tipo;
+        const mostra = filtroTimeline!=='Todos' ? (tipo===filtroTimeline) : (verTodos || TIPOS_RELEVANTES.includes(tipo));
+        card.style.display = mostra ? '' : 'none';
+        if(mostra) visiveis++;
+    });
+    const btn = document.getElementById('btn-ver-todos');
+    if(btn) btn.textContent = verTodos ? 'Mostrar só relevantes' : 'Ver todos os ciclos';
+    const dica = document.getElementById('timeline-dica');
+    if(dica) dica.textContent = (filtroTimeline!=='Todos')
+        ? `Filtro: ${filtroTimeline} — ${visiveis} ciclo(s). Clique em um card para detalhes.`
+        : (verTodos ? `Exibindo todos os ${visiveis} ciclos. Clique em um card para detalhes.`
+                    : `Exibindo ${visiveis} ciclo(s) relevante(s) (críticos, recuperações, outliers, correlacionados e estáveis). Clique em um card para detalhes.`);
+}
+function setFiltroTimeline(t, el){
+    filtroTimeline = t; verTodos = false;
+    document.querySelectorAll('.chip-filtro').forEach(c=>c.classList.remove('chip-on'));
+    if(el) el.classList.add('chip-on');
+    aplicarFiltroTimeline();
+}
+function toggleVerTodos(){
+    verTodos = !verTodos; filtroTimeline = 'Todos';
+    const chips = document.querySelectorAll('.chip-filtro');
+    chips.forEach((c,i)=>c.classList.toggle('chip-on', i===0));
+    aplicarFiltroTimeline();
+}
+function abrirModalCiclo(ciclo){
+    const idx = CICLOS_DATA.findIndex(x=>x.ciclo===ciclo); if(idx<0) return;
+    const c = CICLOS_DATA[idx]; const m = analisarSerie()[idx];
+    const rot = ['Temperatura','Comunicação','Bateria','Oxigênio','Estabilidade'];
+    const uni = ['°C','%','%','L/min','%'];
+    const linhas = c.valores.map((v,i)=>{
+        const s = scoreParam(i,v); const st = ['NORMAL','ATENÇÃO','CRÍTICO'][s];
+        const cor = s===2 ? 'text-rose-300' : s===1 ? 'text-amber-300' : 'text-emerald-300';
+        const val = uni[i]==='%' ? `${v}%` : `${v} ${uni[i]}`;
+        return `<div class="flex items-center gap-3 py-2 border-b border-white/5">
+            <span class="text-slate-300 w-28 shrink-0">${rot[i]}</span>
+            <span class="mono text-slate-100 w-20 shrink-0">${escHtml(val)}</span>
+            <span class="mono text-[10px] ${cor} w-16 shrink-0">${st}</span>
+            <span class="text-[11px] text-slate-400 flex-1 text-right">${escHtml(c.alertas[i]||'')}</span>
+        </div>`;
+    }).join('');
+    document.getElementById('modal-titulo').textContent = `Ciclo ${c.ciclo} — ${c.classificacao || m.classificacao}`;
+    document.getElementById('modal-body').innerHTML = `
+        <div class="flex flex-wrap items-center gap-2 mb-4">
+            <span class="tag ${TIPO_STYLE[m.tipo]||'tag-destaque'}">${m.tipo}</span>
+            <span class="mono px-2.5 py-0.5 rounded-lg text-xs ${corBadge(c.risco)}">Risco ${c.risco}/10</span>
+            <span class="mono text-[10px] text-slate-500">${m.anomalias} anomalia(s) · ${escHtml(c.timestamp)}</span>
+        </div>
+        <div class="rounded-xl border border-white/5 overflow-hidden mb-4 px-1">${linhas}</div>
+        <p class="text-xs text-slate-400 mb-1"><span class="text-slate-300 font-semibold">Justificativa:</span> ${escHtml(c.justificativa||'')}</p>
+        <div class="rounded-xl bg-indigo-400/[0.05] border border-indigo-400/15 p-3 mt-3">
+            <span class="mono block text-[9px] uppercase tracking-wider text-indigo-300 font-medium mb-1">Recomendação · NEXUS-7</span>
+            <p class="text-xs text-slate-300 italic">"${escHtml(c.ia_insight||'')}"</p>
+        </div>`;
+    const md = document.getElementById('modal-ciclo');
+    md.classList.remove('hidden'); md.classList.add('flex');
+}
+function fecharModal(){ const m=document.getElementById('modal-ciclo'); m.classList.add('hidden'); m.classList.remove('flex'); }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') fecharModal(); });
+
+/* ── SINCRONIZAR ────────────────────────────────────── */
+function sincronizar(){
+    redesenharCharts();
+    atualizarResumo();
+    renderTimeline();
+    atualizarEnergia();
+    atualizarMural();
+    atualizarDiagnostico();
+}
+
+/* ── ADICIONAR CICLO ────────────────────────────────── */
+function adicionarCicloLocal(d){
+    CICLOS_DATA.push(d);
+    const banner = document.getElementById('banner-evacuacao');
+    const header = document.getElementById('header');
+    if(d.alerta_evacuacao){ banner.classList.remove('hidden'); banner.classList.add('flex'); header.classList.add('mt-9'); }
+    else { banner.classList.add('hidden'); banner.classList.remove('flex'); header.classList.remove('mt-9'); }
+    atualizarSugestaoCopiloto(d);
+}
+function adicionarCiclo(d){
+    adicionarCicloLocal(d);
+    sincronizar();
+    if(d.alerta_evacuacao) mostrarToast(`Evacuação iminente — Ciclo ${d.ciclo} crítico`, 'error');
+    else if(d.risco>=8) mostrarToast(`Ciclo ${d.ciclo} — risco crítico: ${d.risco}/10`, 'error');
+    else if(d.risco>=5) mostrarToast(`Ciclo ${d.ciclo} — atenção: risco ${d.risco}/10`, 'warning');
+}
+
+/* ── STATUS ─────────────────────────────────────────── */
+function setStatus(id,msg,tipo='loading'){
+    const el = document.getElementById(id); if(!el) return;
+    const cls = { loading:'text-amber-300 pulse-soft', success:'text-emerald-300', error:'text-rose-300' };
+    el.className = `mono text-xs mt-2 min-h-[1.25rem] ${cls[tipo]||cls.loading}`;
+    el.textContent = msg;
+}
+function clearStatus(id,delay=6000){ setTimeout(()=>{ const el=document.getElementById(id); if(el){ el.textContent=''; el.className='mono text-xs mt-2 min-h-[1.25rem]'; } }, delay); }
+
+/* ── GERAR SIMULAÇÃO (Fase 6) ───────────────────────── */
+async function gerarSimulacao(reusarSeed){
+    const btn = document.getElementById('btn-gerar'), btn2 = document.getElementById('btn-reseed');
+    const n = +document.getElementById('gen-n').value;
+    const perfil = document.getElementById('gen-perfil').value;
+    let seedRaw = document.getElementById('gen-seed').value.trim();
+    let seed;
+    if(reusarSeed && ultimaSeed!=null) seed = ultimaSeed;
+    else if(seedRaw==='') seed = Math.floor(Math.random()*1e6);
+    else seed = parseInt(seedRaw,10);
+    ultimaSeed = seed; document.getElementById('gen-seed').value = seed;
+    const evTipo = document.getElementById('gen-ev-tipo').value;
+    const evCiclo = +document.getElementById('gen-ev-ciclo').value;
+    const eventos = evTipo ? [{ ciclo: evCiclo, tipo: evTipo }] : null;
+
+    btn.disabled = true; btn2.disabled = true;
+    const txt0 = btn.textContent; btn.textContent = 'Gerando…';
+    setStatus('status-gerar', `${NOME_IA} — gerando ${n} ciclos (perfil ${perfil}, seed ${seed})…`, 'loading');
+    try{
+        const r = await fetch('/api/simulacao/gerar', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ n_ciclos:n, perfil, seed, eventos }) });
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        const data = await r.json();
+        (data.ciclos||[]).forEach(c=> adicionarCicloLocal(c));
+        sincronizar();
+        document.getElementById('narrativa-txt').textContent = data.narrativa || '';
+        document.getElementById('narrativa-box').classList.remove('hidden');
+        setStatus('status-gerar', `✓ ${data.n_ciclos} ciclos gerados (perfil ${data.perfil}, seed ${data.seed})`, 'success');
+        clearStatus('status-gerar', 8000);
+        const pico = Math.max(...data.ciclos.map(c=>c.risco));
+        if(pico>=8) mostrarToast(`Simulação ${data.perfil}: pico de risco ${pico}/10`, 'error');
+        else if(pico>=5) mostrarToast(`Simulação ${data.perfil}: pico de risco ${pico}/10`, 'warning');
+        else mostrarToast(`Simulação ${data.perfil} concluída`, 'success');
+    }catch(e){ setStatus('status-gerar', `✗ Erro: ${e.message}`, 'error'); clearStatus('status-gerar',5000); }
+    finally{ btn.disabled=false; btn2.disabled=false; btn.textContent=txt0; }
+}
+
+/* ── CICLO ÚNICO / MANUAL ───────────────────────────── */
+async function simularCiclo(){
+    const btn=document.getElementById('btn-simular'); btn.disabled=true; const t=btn.textContent; btn.textContent='Aguarde…';
+    setStatus('status-simular', `${NOME_IA} — coletando os dados…`, 'loading');
+    try{
+        const r = await fetch('/api/telemetria/novo', { method:'POST' });
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        const data = await r.json(); adicionarCiclo(data);
+        setStatus('status-simular', `✓ ${NOME_IA} gerou o Ciclo ${data.ciclo}`, 'success'); clearStatus('status-simular');
+    }catch(e){ setStatus('status-simular', `✗ Erro: ${e.message}`, 'error'); clearStatus('status-simular',4000); }
+    finally{ btn.disabled=false; btn.textContent=t; }
+}
+async function injetarManual(){
+    const btn=document.getElementById('btn-manual'); btn.disabled=true; const t=btn.textContent; btn.textContent='Aguarde…';
+    setStatus('status-manual', `${NOME_IA} — coletando os dados…`, 'loading');
+    try{
+        const r = await fetch('/api/telemetria/manual', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+                temperatura:+document.getElementById('sl-temp').value, comunicacao:+document.getElementById('sl-com').value,
+                bateria_solar:+document.getElementById('sl-bat').value, consumo_o2:+document.getElementById('sl-o2').value,
+                matriz:+document.getElementById('sl-mat').value }) });
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        const data = await r.json(); adicionarCiclo(data);
+        setStatus('status-manual', `✓ ${NOME_IA} gerou o Ciclo ${data.ciclo}`, 'success'); clearStatus('status-manual');
+    }catch(e){ setStatus('status-manual', `✗ Erro: ${e.message}`, 'error'); clearStatus('status-manual',4000); }
+    finally{ btn.disabled=false; btn.textContent=t; }
+}
+
+/* ── TOAST ──────────────────────────────────────────── */
+function mostrarToast(msg,type='success'){
+    const est = { error:'bg-rose-900/90 border-rose-600 text-rose-100', warning:'bg-amber-900/90 border-amber-600 text-amber-100', success:'bg-emerald-900/90 border-emerald-600 text-emerald-100' };
+    const t = document.createElement('div');
+    t.className = `fixed bottom-24 right-6 z-[200] text-xs px-4 py-2.5 rounded-xl shadow-xl border pointer-events-none ${est[type]||est.success}`;
+    t.textContent = msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3500);
+}
+
+/* ── EXPORTAR RELATÓRIO (server-side, Fase 6) ───────── */
+function exportarRelatorio(){
+    window.location.href = '/api/relatorio';
+    mostrarToast('Gerando relatório .txt…', 'success');
+}
+
+/* ── CHAT ───────────────────────────────────────────── */
+function addChatMsg(role,content){
+    const box=document.getElementById('chat-msgs'); const isUser=role==='user';
+    const d=document.createElement('div'); d.className=isUser?'flex justify-end':'flex justify-start';
+    if(isUser){ d.innerHTML=`<span class="inline-block max-w-xs text-xs px-3.5 py-2.5 rounded-2xl leading-relaxed bg-indigo-500 text-white">${escHtml(content)}</span>`; }
+    else { d.innerHTML=`<div class="md max-w-sm text-xs px-4 py-3 rounded-2xl bg-slate-800/70 text-slate-300 border border-white/5">${marked.parse(content,{breaks:true,gfm:true})}</div>`; }
+    box.appendChild(d); box.scrollTop=box.scrollHeight;
+}
+async function enviarChat(){
+    const inp=document.getElementById('chat-input'); const msg=inp.value.trim(); if(!msg) return;
+    inp.value=''; inp.disabled=true; addChatMsg('user',msg);
+    try{ const r=await fetch('/api/chat',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({mensagem:msg}) });
+        const d=await r.json(); addChatMsg('assistant', d.resposta||d.erro||'Erro desconhecido.');
+    }catch(e){ addChatMsg('assistant','Erro de conexão com o servidor.'); }
+    finally{ inp.disabled=false; inp.focus(); }
+}
+document.getElementById('chat-input').addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); enviarChat(); } });
+
+/* ── COPILOTO ───────────────────────────────────────── */
+function gerarSugestao(c){
+    if(!c) return 'Aguardando dados de telemetria…';
+    const v=c.valores;
+    if(v[0]>38) return `⚠️ Temperatura crítica: ${v[0]}°C (Ciclo ${c.ciclo}). Como evitar colapso térmico do hardware?`;
+    if(v[2]<30) return `⚠️ Bateria Solar em ${v[2]}% (Ciclo ${c.ciclo}). Como otimizar a captação fotovoltaica?`;
+    if(v[1]<40) return `⚠️ Sinal em ${v[1]}% (Ciclo ${c.ciclo}). Qual protocolo de alinhamento de antenas usar?`;
+    if(v[3]>11) return `⚠️ Consumo de O2 em ${v[3]}L/min (Ciclo ${c.ciclo}). Como reduzir a pressão do módulo de suporte?`;
+    if(v[4]<50) return `⚠️ Matriz em ${v[4]}% (Ciclo ${c.ciclo}). Como estabilizar a rede elétrica da nave?`;
+    return `✅ Ciclo ${c.ciclo} nominal (Risco ${c.risco}/10). Há otimizações de longo prazo recomendadas?`;
+}
+function atualizarSugestaoCopiloto(c){ document.getElementById('copilot-sugestao').textContent = gerarSugestao(c); }
+function toggleCopiloto(){ const p=document.getElementById('copilot-popup'); const fechado=p.classList.toggle('hidden'); if(!fechado) atualizarSugestaoCopiloto(CICLOS_DATA[CICLOS_DATA.length-1]||null); }
+function enviarSugestaoParaChat(){
+    const s=document.getElementById('copilot-sugestao').textContent;
+    document.getElementById('copilot-popup').classList.add('hidden');
+    const inp=document.getElementById('chat-input'); inp.value=s;
+    document.getElementById('chat-section').scrollIntoView({behavior:'smooth'}); inp.focus(); setTimeout(enviarChat,350);
+}
+
+/* ── ESTATÍSTICAS ───────────────────────────────────── */
+async function carregarEstatisticas(){
+    const btn=document.getElementById('btn-stats'); const container=document.getElementById('stats-container');
+    btn.disabled=true; btn.textContent='calculando…';
+    try{
+        const r=await fetch('/api/estatisticas'); const dados=await r.json(); const campos=Object.values(dados);
+        if(!campos.length){ container.textContent='Sem dados.'; return; }
+        const corCV = cv => cv<15 ? 'text-emerald-400' : cv<30 ? 'text-amber-400' : 'text-rose-400';
+        container.innerHTML = `<div class="overflow-x-auto"><table class="w-full text-[10px] border-collapse mono">
+            <thead><tr class="border-b border-white/10 text-slate-500">
+            <th class="text-left py-2.5 pr-4 uppercase tracking-wider">Variável</th><th class="text-right px-2">N</th><th class="text-right px-2">Média</th><th class="text-right px-2">Mediana</th><th class="text-right px-2">Mín</th><th class="text-right px-2">Máx</th><th class="text-right px-2">Ampl</th><th class="text-right px-2">σ</th><th class="text-right px-2">CV%</th><th class="text-right px-2">Q1</th><th class="text-right px-2">Q3</th></tr></thead>
+            <tbody>${campos.map(c=>`<tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+            <td class="py-2.5 pr-4 text-slate-300 font-semibold" style="font-family:Sora">${escHtml(c.label)}</td>
+            <td class="text-right px-2 text-slate-500">${c.n}</td><td class="text-right px-2 text-slate-100 font-bold">${c.media}</td>
+            <td class="text-right px-2 text-slate-400">${c.mediana}</td><td class="text-right px-2 text-emerald-400">${c.minimo}</td>
+            <td class="text-right px-2 text-rose-400">${c.maximo}</td><td class="text-right px-2 text-slate-400">${c.amplitude}</td>
+            <td class="text-right px-2 text-slate-400">${c.desvio_padrao}</td><td class="text-right px-2 font-bold ${corCV(c.coef_variacao)}">${c.coef_variacao}%</td>
+            <td class="text-right px-2 text-slate-500">${c.q1}</td><td class="text-right px-2 text-slate-500">${c.q3}</td></tr>`).join('')}</tbody></table>
+            <p class="text-[9px] text-slate-600 mt-3">CV% = Coef. de Variação · Q1/Q3 = Quartis · σ = Desvio Padrão Populacional</p></div>`;
+    }catch(e){ container.textContent='Erro ao carregar estatísticas: '+e.message; }
+    finally{ btn.disabled=false; btn.textContent='atualizar'; }
+}
+
+/* ── SCROLL-SPY ─────────────────────────────────────── */
+(function(){
+    const links=document.querySelectorAll('.nav-link');
+    const activate=id=>{ links.forEach(l=>l.classList.remove('active')); const a=document.querySelector(`.nav-link[href="#${id}"]`); if(a) a.classList.add('active'); };
+    const obs=new IntersectionObserver(es=>{ es.forEach(e=>{ if(e.isIntersecting) activate(e.target.id); }); }, { rootMargin:'-15% 0px -75% 0px', threshold:0 });
+    document.querySelectorAll('section[id]').forEach(s=>obs.observe(s));
+    if(links.length) links[0].classList.add('active');
+})();
+
+/* ── RELÓGIO MET ────────────────────────────────────── */
+setInterval(()=>{ document.getElementById('hud-clock').textContent = new Date().toISOString().slice(11,19); }, 1000);
+
+/* ── INIT ───────────────────────────────────────────── */
+(async()=>{
+    try{ const r=await fetch('/api/chat/historico'); const msgs=await r.json(); msgs.forEach(m=>addChatMsg(m.role,m.content)); }catch(_){}
+    if(CICLOS_DATA.length>0) atualizarSugestaoCopiloto(CICLOS_DATA[CICLOS_DATA.length-1]);
+    sincronizar();
+    carregarEstatisticas();
+})();
+</script>
+</body>
+</html>
