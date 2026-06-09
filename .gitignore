@@ -1,12 +1,12 @@
 # ───────────────────────────── Segredos / Ambiente ─────────────────────────────
 .env
-*.env
+.env
 !.env.example
 
 # ───────────────────────────── Banco de dados (efémero) ────────────────────────
-*.db
-*.sqlite
-*.sqlite3
+.db
+.sqlite
+.sqlite3
 missao.db
 mission_control.db
 
@@ -40,7 +40,7 @@ htmlcov/
 
 # ───────────────────────────── Claude Code (contexto/tooling local) ─────────────
 .claude/
-*.claude
+.claude
 CLAUDE.local.md
 
 # ───────────────────────────── Logs / Temporários ──────────────────────────────
