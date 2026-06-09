@@ -1,8 +1,17 @@
-# Mission Control AI
+Mission Control AI
 
-> Central inteligente de monitoramento de missão espacial experimental — telemetria em tempo real, análise de risco, gestão energética e IA generativa (NEXUS-7).
-> **FIAP · Global Solution 2026.1**
+Central inteligente de monitoramento de missão espacial experimental
 
+Telemetria em tempo real • Análise de risco • Gestão energética • IA generativa (NEXUS-7)
+
+FIAP · Global Solution 2026.1
+Deploy Railway
+
+🚀 Acesse o projeto
+
+Abrir Mission Control AI
+
+https://missioncontrolai.up.railway.app/
 ## Integrantes
 
 * Thiago de Oliveira Coelho Souza — RM: 568783
