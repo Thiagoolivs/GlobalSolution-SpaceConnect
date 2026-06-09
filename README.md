@@ -1,17 +1,14 @@
-Mission Control AI
+# Mission Control AI
 
-Central inteligente de monitoramento de missão espacial experimental
+> Central inteligente de monitoramento de missão espacial experimental — telemetria em tempo real, análise de risco, gestão energética e IA generativa (NEXUS-7).
+> **FIAP · Global Solution 2026.1**
 
-Telemetria em tempo real • Análise de risco • Gestão energética • IA generativa (NEXUS-7)
+<p align="center">
+  <a href="https://missioncontrolai.up.railway.app/" target="_blank">
+    <img src="https://img.shields.io/badge/%20ACESSAR%20MISSION%20CONTROL%20AI-0A66C2?style=for-the-badge" alt="Acessar Projeto"/>
+  </a>
+</p>
 
-FIAP · Global Solution 2026.1
-Deploy Railway
-
-🚀 Acesse o projeto
-
-Abrir Mission Control AI
-
-https://missioncontrolai.up.railway.app/
 ## Integrantes
 
 * Thiago de Oliveira Coelho Souza — RM: 568783
@@ -217,48 +214,54 @@ sequenceDiagram
 > As imagens devem ser salvas em `assets/` e referenciadas abaixo.
 
 ### Print 1 — Dashboard Operacional Completo
-`[INSERIR IMAGEM AQUI]` *(assets/dashboard.png)*
+<img width="635" height="356" alt="image" src="https://github.com/user-attachments/assets/36d6928b-2f64-4c60-a74d-8b596d0f40f7" />
+
 Descrição: dashboard principal com HUD de vitais, sumário (classificação + justificativa) e navegação.
 
 ### Print 2 — Simulação Automática de Telemetria
-`[INSERIR IMAGEM AQUI]` *(assets/simulacao.png)*
+<img width="285" height="195" alt="image" src="https://github.com/user-attachments/assets/489dff70-bb69-4c3d-929e-ca26ab41214c" />
+
 Descrição: geração automática de um novo ciclo e atualização do dashboard sem reload.
 
 ### Print 3 — Inserção Manual de Telemetria
-`[INSERIR IMAGEM AQUI]` *(assets/manual.png)*
+<img width="469" height="382" alt="image" src="https://github.com/user-attachments/assets/ec99ffef-840c-4f62-aae9-f79c8e86915f" />
+
 Descrição: formulário com sliders para injeção manual de dados da missão.
 
 ### Print 4 — Gráficos em Tempo Real
-`[INSERIR IMAGEM AQUI]` *(assets/graficos.png)*
+<img width="629" height="332" alt="image" src="https://github.com/user-attachments/assets/692e22f7-dd3e-4790-a86d-23bef75cc1e1" />
+
 Descrição: atualização dinâmica dos 5 gráficos Chart.js após novos ciclos.
 
 ### Print 5 — Alerta Crítico de Emergência
-`[INSERIR IMAGEM AQUI]` *(assets/evacuacao.png)*
+<img width="634" height="143" alt="image" src="https://github.com/user-attachments/assets/4529db2d-f531-4b6b-a63e-b6beee1ff530" />
+
 Descrição: banner de evacuação após detecção da anomalia crítica (temp > 35 e bateria < 30).
 
 ### Print 6 — Chat com IA
-`[INSERIR IMAGEM AQUI]` *(assets/chat.png)*
+<img width="638" height="326" alt="image" src="https://github.com/user-attachments/assets/3e665113-a5bd-4007-a00c-96376f6bed9a" />
+
 Descrição: interação entre operador e copiloto NEXUS-7, com resposta em Markdown.
 
 ### Print 7 — Insight Proativo da IA
-`[INSERIR IMAGEM AQUI]` *(assets/copiloto.png)*
+<img width="629" height="329" alt="image" src="https://github.com/user-attachments/assets/f05fa596-36d6-4927-b2ca-d3fafc9efeca" />
+
 Descrição: widget flutuante com recomendação automática baseada no último ciclo.
 
 ### Print 8 — Diagnóstico Operacional
-`[INSERIR IMAGEM AQUI]` *(assets/diagnostico.png)*
+<img width="630" height="358" alt="image" src="https://github.com/user-attachments/assets/67bafa7b-c82e-4350-b51e-2e789884dc1c" />
+
 Descrição: cards por variável com status, faixa ideal, impacto e recomendação.
 
 ### Print 9 — Timeline + Modal de Detalhe
-`[INSERIR IMAGEM AQUI]` *(assets/timeline.png)*
+<img width="640" height="298" alt="image" src="https://github.com/user-attachments/assets/fd6b9c83-c028-4c28-98fa-25e12b83fb01" />
+
 Descrição: cards clicáveis com filtros e modal de detalhe do ciclo.
 
 ### Print 10 — Subsistema Energético (SERS)
-`[INSERIR IMAGEM AQUI]` *(assets/energia.png)*
-Descrição: indicadores e gráficos de consumo × geração + recomendação energética.
+<img width="640" height="331" alt="image" src="https://github.com/user-attachments/assets/20074238-26d7-4c4f-9551-88eb121bb076" />
 
-### Print 11 — Versão Terminal (DSA)
-`[INSERIR IMAGEM AQUI]` *(assets/terminal.png)*
-Descrição: `python mission_control.py` exibindo a análise e o relatório no terminal.
+Descrição: indicadores e gráficos de consumo × geração + recomendação energética.
 
 ---
 
@@ -692,8 +695,7 @@ Deploy via `Procfile` (`gunicorn app:app`) + plugin PostgreSQL (`DATABASE_URL`).
 ### Link do Vídeo
 `[COLE O LINK DO YOUTUBE AQUI]`
 
-### O vídeo deve demonstrar:
-* Apresentação dos integrantes
+### O vídeo irá demonstrar:
 * Visão geral do projeto
 * Dashboard funcionando
 * Simulação de telemetria (automática e gerador de missão)
@@ -703,7 +705,6 @@ Deploy via `Procfile` (`gunicorn app:app`) + plugin PostgreSQL (`DATABASE_URL`).
 * Cenário crítico (banner de evacuação)
 * Funcionamento da IA (insight + chat + copiloto)
 * Versão terminal (DSA)
-* Conclusão
 
 ---
 
