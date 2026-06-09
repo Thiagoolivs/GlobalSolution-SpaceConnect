@@ -11,17 +11,11 @@
 
 ---
 
-## 📑 Sumário para Avaliadores
+## Sumário
 
-> **Professores:** acesso rápido à seção da sua disciplina, com o mapeamento exato dos requisitos.
+Disciplinas: [PIA — Prompt & AI](#pia) · [SERS — Energias Renováveis](#sers) · [DSA — Data Structures & Algorithms](#dsa) · [PCP — Pensamento Computacional](#pcp)
 
-| Disciplina | Seção (link direto) | O que avaliar |
-|-----------|---------------------|----------------|
-| 🤖 **Prompt and Artificial Intelligence** | **[▶ Abrir seção PIA](#pia)** | IA generativa (Llama 3.1/Groq), prompt engineering, chat com memória, insights automáticos |
-| 🔋 **Energias Renováveis e Sustentáveis (SERS)** | **[▶ Abrir seção SERS](#sers)** | Bateria solar, matriz energética, balanço gerado×consumido, eficiência, decisão sustentável |
-| 🧮 **Data Structures and Algorithms (DSA)** | **[▶ Abrir seção DSA](#dsa)** | Vetores/listas, laços, condicionais, funções, algoritmos de busca/agregação |
-
-**Navegação geral:** [Visão Geral](#visão-geral-do-projeto) · [Arquitetura](#arquitetura-da-solução) · [Tecnologias](#tecnologias-utilizadas) · [Funcionalidades](#funcionalidades-implementadas) · [Demonstração](#demonstração-do-sistema) · [Estrutura de Pastas](#estrutura-de-pastas) · [Banco de Dados](#banco-de-dados) · [Regras de Negócio](#regras-de-negócio) · [Integração com IA](#integração-com-inteligência-artificial) · [Como Executar](#como-executar) · [Evidências para Avaliação](#evidências-para-avaliação) · [Vídeo](#vídeo-de-demonstração) · [Conclusão](#conclusão)
+Seções: [Visão Geral](#visão-geral-do-projeto) · [Arquitetura](#arquitetura-da-solução) · [Tecnologias](#tecnologias-utilizadas) · [Funcionalidades](#funcionalidades-implementadas) · [Demonstração](#demonstração-do-sistema) · [Banco de Dados](#banco-de-dados) · [Regras de Negócio](#regras-de-negócio) · [Integração com IA](#integração-com-inteligência-artificial) · [Como Executar](#como-executar) · [Evidências](#evidências-para-avaliação)
 
 ---
 
@@ -557,6 +551,63 @@ def identificar_area_mais_afetada(matriz):
 | Uso correto das estruturas de dados (3,0) | matriz `dados_missao` (lista de listas), listas acumuladoras, dicionários de métricas, vetores de rótulos/unidades |
 | Organização do código (2,0) | funções nomeadas e coesas, constantes (sem números mágicos), docstrings, separação clara de responsabilidades |
 | Lógica implementada (1,0) | scoring 0–2, classificação por faixas, tendência, busca de máximo (`index(max(...))`), conclusão dinâmica |
+
+---
+
+<a id="pcp"></a>
+## Disciplina — Pensamento Computacional e Automação com Python
+
+**Como o projeto atende:** o enunciado de PCP descreve **exatamente este projeto** — o `mission_control.py` é a implementação direta e completa de todos os requisitos obrigatórios, em Python puro (sem bibliotecas externas), e o dashboard web amplia a mesma lógica.
+
+- **Estrutura de dados central:** matriz `dados_missao` (lista de listas, ≥6 ciclos) na ordem `[temperatura, comunicacao, bateria, oxigenio, estabilidade]` + lista `areas_monitoradas`.
+- **Automação da análise:** laços percorrem os ciclos; condicionais classificam cada variável (NORMAL/ATENÇÃO/CRÍTICO); o risco é a soma dos *scores* (0–10).
+- **Pensamento computacional:** decomposição em funções, abstração das regras e reconhecimento de padrões (tendência, área mais afetada, recuperação).
+- **Relatório final no terminal** com médias, ciclo mais crítico, tendência, área mais afetada, classificação e conclusão dinâmica.
+
+**Requisitos obrigatórios do enunciado → como foi atendido:**
+
+| # | Requisito | Atendido | Onde (`mission_control.py`) |
+|---|-----------|:---:|------|
+| 1 | Nome da missão | ✓ | `NOME_MISSAO` |
+| 2 | Nome da equipe | ✓ | `NOME_EQUIPE` |
+| 3 | Matriz `dados_missao` (≥6 ciclos) | ✓ | `dados_missao` (6 ciclos) |
+| 4 | 5 informações na ordem temp/com/bat/oxi/estab | ✓ | estrutura da matriz |
+| 5 | Lista de áreas monitoradas | ✓ | `areas_monitoradas` |
+| 6 | Pelo menos 5 funções | ✓ | 10+ funções |
+| 7 | Estrutura de repetição para percorrer ciclos | ✓ | `for` em `main()` |
+| 8 | Condicionais para gerar alertas | ✓ | `analisar_*` |
+| 9 | Cálculo de risco por ciclo | ✓ | soma dos *scores* |
+| 10 | Classificação de cada ciclo | ✓ | `classificar_ciclo` (faixas em [Regras de Negócio](#regras-de-negócio)) |
+| 11 | Análise da tendência da missão | ✓ | `analisar_tendencia` |
+| 12 | Identificação da área mais afetada | ✓ | `identificar_area_mais_afetada` |
+| 13 | Relatório final exibido no terminal | ✓ | `main()` |
+
+**Funções (≥5 exigidas):** `analisar_temperatura`, `analisar_comunicacao`, `analisar_energia` (bateria), `analisar_oxigenio`, `analisar_estabilidade`, `classificar_ciclo`, `analisar_tendencia`, `identificar_area_mais_afetada`, `recomendar_ciclo`, `gerar_conclusao`.
+
+```python
+# Trecho de mission_control.py — laço + agregação de risco por área
+def identificar_area_mais_afetada(matriz):
+    acumulado = [0] * 5
+    for linha in matriz:                       # percorre os ciclos
+        for i, valor in enumerate(linha):      # percorre as variáveis
+            acumulado[i] += ANALISADORES[i](valor)[2]   # soma o risco por área
+    return acumulado.index(max(acumulado)), acumulado   # busca a área de maior risco
+```
+
+**Critérios de avaliação (enunciado, 10 pts) → atendimento:**
+
+| Critério (peso) | Status |
+|-----------------|:---:|
+| Funcionamento geral do sistema (2,0) | ✓ executa e gera o relatório final |
+| Uso de matriz, listas e repetição (1,0) | ✓ `dados_missao` + laços |
+| Uso de funções (1,0) | ✓ 10+ funções bem definidas |
+| Lógica de decisão, risco e análise (1,0) | ✓ alertas, risco, tendência, área mais afetada |
+| GitHub, README e organização (1,0) | ✓ repositório + este README |
+| Vídeo Pitch (2,0) | ⏳ entregável (ver seção [Vídeo](#vídeo-de-demonstração)) |
+
+> Adaptação documentada (permitida pelo item 6 do enunciado): o sistema modela **oxigênio como consumo em L/min** (menor = melhor), em vez de nível em %, e usa limites próprios — todos descritos em [Regras de Negócio](#regras-de-negócio).
+
+**Execução:** `python mission_control.py`
 
 ---
 
